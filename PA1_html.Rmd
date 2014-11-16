@@ -1,0 +1,84 @@
+---
+title: "First Assignment"
+author: "Juan David Larrota"
+date: "Saturday, October 18, 2014"
+output:
+  html_document:
+    keep_md: yes
+---
+## Loading and preprocessing the data
+loading the data into R
+
+```{r}
+activity <- read.csv("~/Rstudio/Reproducible research/activity.csv")
+no_na<- read.csv("~/Rstudio/Reproducible research/activity.csv")
+```
+
+## What is mean total number of steps taken per day?
+Histogram of the total number of steps taken each day
+```{r}
+library(ggplot2)
+totalSteps=tapply(activity$steps,activity$date,sum,na.rm=TRUE)
+qplot(totalSteps, binwidth=1000, main= "total number of steps taken each day")
+```
+
+Mean and median total number of steps taken per day
+```{r}
+data.frame(mean(totalSteps),median(totalSteps))
+```
+## What is the average daily activity pattern?
+time series plot (i.e. type = "l") of the 5-minute interval (x-axis) and the average number of steps taken, averaged across all days (y-axis)
+
+```{r}
+library(ggplot2)
+aggdata=aggregate(activity$steps, by=list(activity$interval), mean, na.rm=TRUE)
+colnames(aggdata)=c("interval", "steps")
+qplot(interval,steps,data=aggdata,geom=c("line"), ylab="average number of steps taken",xlab=" 5-minute interval")
+```
+
+5-minute interval that contains the maximum number of steps?
+```{r}
+aggdata[which.max(aggdata$steps), ]
+```
+
+## Imputing missing values
+total number of missing values in the dataset
+```{r}
+vec_NAS=is.na(activity$steps)
+sum(vec_NAS)
+vec_NAS=which(vec_NAS)
+```
+Fillimg NAS with the mean for the 5-minute interval
+```{r}
+for (i in 1:length(vec_NAS)){
+ mean=as.numeric(tapply(no_na$steps, no_na$interval==no_na$interval[vec_NAS[i]], mean, na.rm=TRUE))
+ no_na$steps[vec_NAS[i]]=mean[2]
+}
+```
+
+histogram of the total number of steps taken each day and the mean and median total number of steps taken per day
+```{r}
+totalSteps=tapply(no_na$steps,no_na$date,sum,na.rm=TRUE)
+qplot(totalSteps, binwidth=1000, main= "total number of steps taken each day")
+data.frame(mean(totalSteps),median(totalSteps))
+```
+## Are there differences in activity patterns between weekdays and weekends?
+```{r}
+Sys.setlocale("LC_TIME", "English")
+## Create a new factor variable in the dataset with two levels - "weekday" and "weekend" indicating whether a given date is a weekday or weekend day.
+weekday.or.weekend <- function(date) {
+  day <- weekdays(date)
+  if (day %in% c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday")) 
+    return("weekday") else if (day %in% c("Saturday", "Sunday")) 
+      return("weekend") else stop("invalid date")
+}
+no_na$date <- as.Date(no_na$date)
+no_na$day <- sapply(no_na$date, FUN = weekday.or.weekend)
+```
+# Make a panel plot
+```{r}
+library(ggplot2)
+aggdata1=with(no_na,aggregate(steps,by=list(day,interval),mean))
+colnames(aggdata1)=c("day","interval","steps")
+qplot(interval, steps,data=aggdata1, facets = .~day , geom="line")
+```
